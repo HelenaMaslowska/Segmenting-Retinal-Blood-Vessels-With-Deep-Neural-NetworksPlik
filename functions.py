@@ -94,3 +94,26 @@ def extract_vessels_copy(retina_source):
 	ax.imshow(color.label2rgb(labeled, retina))
 	ax.set_axis_off()
 	_ = ax.set_title('thresholded vesselness')
+
+def interpolate(image):
+	min, max = image.min(), image.max()
+	arr_subtracted = image - min  # Subtract the minimum
+	# array([  0,  38,  98, 203, 248], dtype=uint8)
+	arr_divided = arr_subtracted / (max - min)  # Divide by new max
+	# array([0.        , 0.15322581, 0.39516129, 0.81854839, 1.        ])
+	arr_multiplied = arr_divided * 255  # Multiply by dtype max
+	# array([  0.        ,  39.07258065, 100.76612903, 208.72983871,
+	#        255.        ])
+	# Convert dtype to original uint8
+	arr_rescaled = np.asarray(arr_multiplied, dtype=image.dtype)
+	# array([  0,  39, 100, 208, 255], dtype=uint8)
+	return arr_rescaled
+
+def erase_above_average(image):
+	average = image.mean(axis=0).mean(axis=0)
+	print(average)
+	for i in range(len(image)):
+		for j in range(len(image[i])):
+			if image[i][j] < average/2:
+				image[i][j] = average
+	return image
