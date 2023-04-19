@@ -1,3 +1,4 @@
+from typing import Literal
 import skimage as ski
 from skimage import io, exposure, data
 import scipy
@@ -10,6 +11,7 @@ from skimage import color, data, filters, graph, measure, morphology
 # data
 filename = 'Data/01_dr.jpg'
 mask_filename = 'Data/01_dr_mask.tif'
+manual_filename = 'Data/01_dr.tif'
 
 
 # read images
@@ -27,11 +29,14 @@ def loadImageTif(mask_filename):
 	return imarray
 
 
-# show image
-def showImage(image, title=None, cmap='gray', axis='on'):
+# show image average: None
+    
+def showImage(image, title=None, cmap: Literal["gray", "magma"] = "gray" , axis='on', shape=None ):
+	if shape: 				image = image.reshape(shape)       
 	plt.imshow(image, cmap=cmap)
 	if title is not None: 	plt.title(title)
 	if axis == 'off': 		plt.axis('off')
+
 	plt.show()
 
 

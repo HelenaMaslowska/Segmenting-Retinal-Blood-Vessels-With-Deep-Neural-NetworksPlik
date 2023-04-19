@@ -13,24 +13,24 @@ from skimage import color, data, filters, graph, measure, morphology
 ##############################################################################################
 
 # extract green channel from image
-def extract_green_channel(image):
+def extract_green_channel(image: np.ndarray) -> np.ndarray:
 	green_channel = image[:, :, 1]
 	return green_channel
 
-def sharpen(image):
+def sharpen(image: np.ndarray) -> np.ndarray:
 	image = ski.filters.unsharp_mask(image, radius=20, amount=2) #20-40 radius, 1-2 amount
 	return image
 
-def brightness(image):
+def brightness(image: np.ndarray) -> np.ndarray:
 	image = ski.exposure.adjust_gamma(image, 0.8)
 	return image
 
-def contrast(image):
+def contrast(image: np.ndarray) -> np.ndarray:
 	image = ski.exposure.rescale_intensity(image, in_range=(0.009, 0.013))
 	# image = ski.exposure.equalize_hist(image)
 	return image
 
-def extract_vessels(retina_source: np.ndarray):
+def extract_vessels(retina_source: np.ndarray) -> np.ndarray:
 	retina = color.rgb2gray(retina_source)
 	t0, t1 = filters.threshold_multiotsu(retina, classes=3)
 	mask = (retina > t0)
@@ -38,10 +38,13 @@ def extract_vessels(retina_source: np.ndarray):
 	vessels = filters.sato(retina, sigmas=range(1, 10)) * mask
 	return vessels 	# return labeled - for better visualization
 
-def threshold(vessels: np.ndarray):
+def threshold(vessels: np.ndarray) -> np.ndarray:
 	thresholded = filters.apply_hysteresis_threshold(vessels, 0.01, 0.03)
 	labeled = ndi.label(thresholded)[0]
 	return thresholded
+
+def add_mask(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
+	return image * mask
 
 ##############################################################################################333
 # Rest of the code is from main file that could be used in the future
