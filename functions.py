@@ -7,7 +7,8 @@ from sklearn.pipeline import Pipeline
 from PIL import Image
 from scipy import ndimage as ndi
 from skimage import color, data, filters, graph, measure, morphology
-
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
+from imblearn.metrics import classification_report_imbalanced
 ##############################################################################################
 # Usefull functions for image processing
 ##############################################################################################
@@ -31,12 +32,28 @@ def contrast(image: np.ndarray) -> np.ndarray:
 	return image
 
 def extract_vessels(retina_source: np.ndarray) -> np.ndarray:
+	'''
+	Extracts vessels from retina image
+	:param retina_source: image of retina
+	:return: image of vessels [0. 0. 0. ... 0. 0. 0.]
+	'''
 	retina = color.rgb2gray(retina_source)
 	t0, t1 = filters.threshold_multiotsu(retina, classes=3)
 	mask = (retina > t0)
 	# vessels = ski.filters.frangi(retina, sigmas=range(1, 10)) * mask
 	vessels = filters.sato(retina, sigmas=range(1, 10)) * mask
 	return vessels 	# return labeled - for better visualization
+
+def extract_and_use_vessels(retina_source: np.ndarray) -> np.ndarray:
+	'''
+	Extracts vessels from retina image and applies some filters
+	:param retina_source: image of retina
+	:return: image of vessels [False False False ... False False False]
+	'''
+	vessels = extract_vessels(retina_source)
+	vessels = contrast(vessels)
+	vessels = threshold(vessels)
+	return vessels
 
 def threshold(vessels: np.ndarray) -> np.ndarray:
 	thresholded = filters.apply_hysteresis_threshold(vessels, 0.01, 0.03)
@@ -45,6 +62,34 @@ def threshold(vessels: np.ndarray) -> np.ndarray:
 
 def add_mask(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
 	return image * mask
+
+def show_stats(vessels: np.ndarray, manual: np.ndarray, reportlib = "sklearn.metrics") -> None:
+	y_pred = vessels.flatten()		# True - żyły, False - tło
+	y_true = manual.flatten()		# 255 - żyły, 0 - tło
+	model_mask = (y_true > 0)		# maska pikseli, które reprezentują żyły w modelu ekspertskim
+
+	y_true_masked = np.zeros(y_true.shape, dtype=bool)		# utworzenie maski True/False dla modelu ekspertskiego
+	y_true_masked[model_mask] = True
+
+	accuracy = accuracy_score(y_true_masked.flatten(), y_pred.flatten())				# trafność - accuracy
+	sensitivity = recall_score(y_true_masked.flatten(), y_pred.flatten()) 				# czułość - sensitivity, recall
+	specificity = recall_score(y_true_masked.flatten(), y_pred.flatten(), pos_label=0)	# swoistość - specificity
+	precision = precision_score(y_true_masked.flatten(), y_pred.flatten()) 				# precyzja - precision
+	
+	print(confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten(), end="\n\n")
+	print(f"Accuracy score:\t\t {accuracy:.6f}")
+	print(f"Sensitivity score:\t {sensitivity:.6f}")
+	print(f"Specificity score:\t {specificity:.6f}")
+	print(f"Precision score:\t {precision:.6f}")
+	print("G-mean: \t\t", round(np.sqrt(sensitivity * specificity), 6))
+	print("Weighted average: \t", round((sensitivity + specificity) / 2, 6))
+
+	if reportlib == "sklearn.metrics":
+		print("\nClassification report with sklearn.metrics")
+		print(classification_report(y_true_masked.flatten(), y_pred.flatten(), target_names=["background", "vessels"]))
+	else:
+		print("\nClassification report with imblearn.metrics")
+		print(classification_report_imbalanced(y_true_masked, y_pred, target_names=['background', 'vessels']))
 
 ##############################################################################################333
 # Rest of the code is from main file that could be used in the future
