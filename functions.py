@@ -75,8 +75,8 @@ def show_stats(vessels: np.ndarray, manual: np.ndarray, reportlib = "sklearn.met
 	sensitivity = recall_score(y_true_masked.flatten(), y_pred.flatten()) 				# czułość - sensitivity, recall
 	specificity = recall_score(y_true_masked.flatten(), y_pred.flatten(), pos_label=0)	# swoistość - specificity
 	precision = precision_score(y_true_masked.flatten(), y_pred.flatten()) 				# precyzja - precision
-	
-	print(confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten(), end="\n\n")
+	cm = confusion_matrix(y_true_masked.flatten(), y_pred.flatten())
+	# print(confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten(), end="\n\n")
 	print(f"Accuracy score:\t\t {accuracy:.6f}")
 	print(f"Sensitivity score:\t {sensitivity:.6f}")
 	print(f"Specificity score:\t {specificity:.6f}")
@@ -90,6 +90,7 @@ def show_stats(vessels: np.ndarray, manual: np.ndarray, reportlib = "sklearn.met
 	else:
 		print("\nClassification report with imblearn.metrics")
 		print(classification_report_imbalanced(y_true_masked, y_pred, target_names=['background', 'vessels']))
+	return cm
 
 ##############################################################################################333
 # Rest of the code is from main file that could be used in the future
@@ -161,4 +162,9 @@ def erase_above_average(image):
 		for j in range(len(image[i])):
 			if image[i][j] < average/2:
 				image[i][j] = average
+	return image
+
+# filtr frangi
+def frangi(image):
+	image = ski.filters.frangi(image, black_ridges=True)
 	return image
