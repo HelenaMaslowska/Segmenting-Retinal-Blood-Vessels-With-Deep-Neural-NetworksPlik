@@ -3,12 +3,14 @@ from skimage import io, exposure, data
 import scipy
 import matplotlib.pyplot as plt
 import numpy as np
+from sklearn import metrics
 from sklearn.pipeline import Pipeline
 from PIL import Image
 from scipy import ndimage as ndi
 from skimage import color, data, filters, graph, measure, morphology
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, confusion_matrix
 from imblearn.metrics import classification_report_imbalanced
+from scipy.stats import gmean
 ##############################################################################################
 # Usefull functions for image processing
 ##############################################################################################
@@ -40,7 +42,6 @@ def extract_vessels(retina_source: np.ndarray) -> np.ndarray:
 	retina = color.rgb2gray(retina_source)
 	t0, t1 = filters.threshold_multiotsu(retina, classes=3)
 	mask = (retina > t0)
-	# vessels = ski.filters.frangi(retina, sigmas=range(1, 10)) * mask
 	vessels = filters.sato(retina, sigmas=range(1, 10)) * mask
 	return vessels 	# return labeled - for better visualization
 
@@ -63,35 +64,55 @@ def threshold(vessels: np.ndarray) -> np.ndarray:
 def add_mask(image: np.ndarray, mask: np.ndarray) -> np.ndarray:
 	return image * mask
 
-def show_stats(vessels: np.ndarray, manual: np.ndarray, reportlib = "sklearn.metrics") -> None:
+def get_statistics(vessels, mask):
+    (w, h) = vessels.shape
+
+    tp, fp, fn, tn = 0, 0, 0, 0
+    for x in range(w):
+        for y in range(h):
+            if (vessels[x, y]):
+                if (mask[x, y]):
+                    tp += 1
+                else:
+                    fp += 1
+            else:
+                if (mask[x, y]):
+                    fn += 1
+                else:
+                    tn += 1
+
+    return tp, fp, fn, tn
+
+def get_metrics(vessels, mask, thresh=0.1):
+	img_bool = vessels > thresh
+	mask_bool = mask > thresh
 	y_pred = vessels.flatten()		# True - żyły, False - tło
-	y_true = manual.flatten()		# 255 - żyły, 0 - tło
-	model_mask = (y_true > 0)		# maska pikseli, które reprezentują żyły w modelu ekspertskim
+	y_true = mask.flatten()		# 255 - żyły, 0 - tło
 
 	y_true_masked = np.zeros(y_true.shape, dtype=bool)		# utworzenie maski True/False dla modelu ekspertskiego
-	y_true_masked[model_mask] = True
+	y_true_masked[mask_bool] = True	# maska pikseli, które reprezentują żyły w modelu ekspertskim
 
-	accuracy = accuracy_score(y_true_masked.flatten(), y_pred.flatten())				# trafność - accuracy
-	sensitivity = recall_score(y_true_masked.flatten(), y_pred.flatten()) 				# czułość - sensitivity, recall
-	specificity = recall_score(y_true_masked.flatten(), y_pred.flatten(), pos_label=0)	# swoistość - specificity
-	precision = precision_score(y_true_masked.flatten(), y_pred.flatten()) 				# precyzja - precision
-	cm = confusion_matrix(y_true_masked.flatten(), y_pred.flatten())
-	# print(confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten(), end="\n\n")
-	print(f"Accuracy score:\t\t {accuracy:.6f}")
-	print(f"Sensitivity score:\t {sensitivity:.6f}")
-	print(f"Specificity score:\t {specificity:.6f}")
-	print(f"Precision score:\t {precision:.6f}")
-	print("G-mean: \t\t", round(np.sqrt(sensitivity * specificity), 6))
-	print("Weighted average: \t", round((sensitivity + specificity) / 2, 6))
+	tp, fp, fn, tn = get_statistics(img_bool, mask_bool)
 
-	if reportlib == "sklearn.metrics":
-		print("\nClassification report with sklearn.metrics")
-		print(classification_report(y_true_masked.flatten(), y_pred.flatten(), target_names=["background", "vessels"]))
-	else:
-		print("\nClassification report with imblearn.metrics")
-		print(classification_report_imbalanced(y_true_masked, y_pred, target_names=['background', 'vessels']))
-	return cm
+	accuracy = (tp + tn) / (tn + fn + tp + fp)
+	sensitivity = tp / (tp + fn)
+	specificity = tn / (fp + tn)
+	precision = tp / (tp + fp)
+	g_mean = np.sqrt(sensitivity * specificity)
+	w_average = (sensitivity + specificity) / 2
+	c_matrix = metrics.confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten()
 
+	return accuracy, sensitivity, specificity, precision, g_mean, w_average, c_matrix
+
+def show_stats(stats):
+	print(f"Accuracy score:\t\t {stats['accuracy']:.6f}")
+	print(f"Sensitivity score:\t {stats['sensitivity']:.6f}")
+	print(f"Specificity score:\t {stats['specificity']:.6f}")
+	print(f"Precision score:\t {stats['precision']:.6f}")
+	print(f"G-mean: \t\t {stats['g_mean']:.6f}")
+	print(f"Weighted average: \t {stats['w_average']:.6f}")
+	print(f"Confusion matrix: \t {stats['c_matrix']}")
+	
 ##############################################################################################333
 # Rest of the code is from main file that could be used in the future
 ##############################################################################################333
