@@ -90,7 +90,7 @@ def get_metrics(vessels, mask, thresh=0.1):
 	y_true = mask.flatten()		# 255 - żyły, 0 - tło
 
 	y_true_masked = np.zeros(y_true.shape, dtype=bool)		# utworzenie maski True/False dla modelu ekspertskiego
-	y_true_masked[mask_bool] = True	# maska pikseli, które reprezentują żyły w modelu ekspertskim
+	y_true_masked[y_true > 0] = True	# maska pikseli, które reprezentują żyły w modelu ekspertskim
 
 	tp, fp, fn, tn = get_statistics(img_bool, mask_bool)
 
@@ -101,7 +101,14 @@ def get_metrics(vessels, mask, thresh=0.1):
 	g_mean = np.sqrt(sensitivity * specificity)
 	w_average = (sensitivity + specificity) / 2
 	c_matrix = metrics.confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten()
-
+	stats = {}
+	stats['accuracy'] = accuracy
+	stats['sensitivity'] = sensitivity
+	stats['specificity'] = specificity
+	stats['precision'] = precision
+	stats['g_mean'] = g_mean
+	stats['w_average'] = w_average
+	stats['c_matrix'] = c_matrix
 	return accuracy, sensitivity, specificity, precision, g_mean, w_average, c_matrix
 
 def show_stats(stats):

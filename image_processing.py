@@ -28,9 +28,6 @@ def loadImageTif(mask_filename):
 	imarray = np.array(im)
 	return imarray
 
-
-# show image average: None
-    
 def showImage(image, title=None, cmap: Literal["gray", "magma"] = "gray" , axis='on', shape=None ):
 	if shape: 				image = image.reshape(shape)       
 	plt.imshow(image, cmap=cmap)
@@ -42,5 +39,5 @@ def showImage(image, title=None, cmap: Literal["gray", "magma"] = "gray" , axis=
 
 # save image
 def saveImage(image, filename):
-    data = (image * 255).astype(np.uint8)
+    # data = (image * 255).astype(np.uint8)
     ski.io.imsave(filename, data)
