@@ -88,28 +88,21 @@ def get_metrics(vessels, mask, thresh=0.1):
 	mask_bool = mask > thresh
 	y_pred = vessels.flatten()		# True - żyły, False - tło
 	y_true = mask.flatten()		# 255 - żyły, 0 - tło
-
 	y_true_masked = np.zeros(y_true.shape, dtype=bool)		# utworzenie maski True/False dla modelu ekspertskiego
 	y_true_masked[y_true > 0] = True	# maska pikseli, które reprezentują żyły w modelu ekspertskim
 
 	tp, fp, fn, tn = get_statistics(img_bool, mask_bool)
 
-	accuracy = (tp + tn) / (tn + fn + tp + fp)
-	sensitivity = tp / (tp + fn)
-	specificity = tn / (fp + tn)
-	precision = tp / (tp + fp)
-	g_mean = np.sqrt(sensitivity * specificity)
-	w_average = (sensitivity + specificity) / 2
-	c_matrix = metrics.confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten()
 	stats = {}
-	stats['accuracy'] = accuracy
-	stats['sensitivity'] = sensitivity
-	stats['specificity'] = specificity
-	stats['precision'] = precision
-	stats['g_mean'] = g_mean
-	stats['w_average'] = w_average
-	stats['c_matrix'] = c_matrix
-	return accuracy, sensitivity, specificity, precision, g_mean, w_average, c_matrix
+	stats['accuracy'] = (tp + tn) / (tn + fn + tp + fp)
+	stats['sensitivity'] = tp / (tp + fn)
+	stats['specificity'] = tn / (fp + tn)
+	stats['precision'] = tp / (tp + fp)
+	stats['g_mean'] = np.sqrt(stats['sensitivity'] * stats['specificity'])
+	stats['w_average'] = (stats['sensitivity'] + stats['specificity']) / 2
+	stats['c_matrix'] = metrics.confusion_matrix(y_true_masked.flatten(), y_pred.flatten()).flatten()
+	
+	return stats
 
 def show_stats(stats):
 	print(f"Accuracy score:\t\t {stats['accuracy']:.6f}")
